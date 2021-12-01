@@ -6,12 +6,13 @@ import spriteloader
 
 
 class Player(pygame.sprite.Sprite):
-    hp = 100
-    mana = 100
-    damage = 4
 
     def __init__(self, position):
         super().__init__()
+        self.damage = 5
+        self.hp = 1
+        self.xp = 0
+        self.kill_count = 0
         movement = spriteloader.spritesheet(os.path.join('images', 'PlayerMovement.png'))
         attack = spriteloader.spritesheet(os.path.join('images', 'PlayerAttack.png'))
         self.last_action = 0
@@ -46,6 +47,7 @@ class Player(pygame.sprite.Sprite):
         self.current_sprite = 0
         self.image = self.player_move_sprite_down[self.current_sprite]
         self.rect = self.image.get_rect(center=position)
+        self.hitbox = self.rect.inflate(-50, -50)
 
     def lose_hp(self, damage):
         self.hp = self.hp - damage
@@ -68,3 +70,4 @@ class Player(pygame.sprite.Sprite):
         elif action == 2:
             self.image = self.player_attack[direction][self.current_sprite]
         self.rect = self.image.get_rect(center=position)
+        self.hitbox = self.rect.inflate(-10, -10)

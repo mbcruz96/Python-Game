@@ -6,10 +6,11 @@ import spriteloader
 
 
 class Npc(pygame.sprite.Sprite):
-    damage = 1
 
     def __init__(self, position, enemy_name):
         super().__init__()
+        self.damage = 1
+        self.hp = 10
         movement = spriteloader.spritesheet(os.path.join('images', enemy_name + 'Movement.png'))
         self.last_action = 0
         self.enemy_movement = []
@@ -29,6 +30,7 @@ class Npc(pygame.sprite.Sprite):
         self.current_sprite = 0
         self.image = self.enemy_move_sprite_down[self.current_sprite]
         self.rect = self.image.get_rect(center=position)
+        self.hitbox = self.rect.inflate(-50, -50)
 
     def update(self, position, direction, action=1):
         self.last_action = action
@@ -46,6 +48,7 @@ class Npc(pygame.sprite.Sprite):
         elif action == 2:
             self.image = self.enemy_movement[direction][self.current_sprite]
         self.rect = self.image.get_rect(center=position)
+        self.hitbox = self.rect.inflate(-10, -10)
 
-    def get_rect(self):
-        return self.rect
+    def take_damage(self, damage):
+        self.hp -= damage
