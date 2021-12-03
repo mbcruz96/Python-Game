@@ -182,7 +182,7 @@ class Player(pygame.sprite.Sprite):
         if not self.level10 and self.xp >= 81:
             self.level10 = True
             self.hp += 25
-            player_sprites = spriteloader.spritesheet(os.path.join('images', 'lvl5player.png'))
+            player_sprites = spriteloader.spritesheet(os.path.join('images', 'lvl10player.png'))
             self.player_movement = []
             self.player_move_sprite_north = []
             self.player_move_sprite_south = []
