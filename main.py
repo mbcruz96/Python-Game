@@ -12,19 +12,20 @@ from player import Player
 # Pygame setup
 pygame.init()
 screenInfo = pygame.display.Info()
-windowX = int(screenInfo.current_w * .9)
-windowY = int(screenInfo.current_h * .9)
+windowX = int(1920 * .9)
+windowY = int(1080 * .9)
 x_offset = windowX / 2
-y_offset = windowY / 4
+y_offset = windowY / 8
 gameWindow = pygame.display.set_mode((windowX, windowY))
 pygame.display.set_caption("Pygame Project")
 gameClock = pygame.time.Clock()
+font = pygame.font.Font('freesansbold.ttf', 32)
 
 # Pygame Images & Sound effects
 backdrop = pygame.image.load(os.path.join('images', 'BLACK_BACKGROUND.png'))
 game_over_screen = pygame.image.load(os.path.join('images', 'GAMEOVER.png'))
-pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
-pygame.mixer.music.play(-1)
+menu_screen = pygame.image.load(os.path.join('images', 'MENU.png'))
+victory_screen = pygame.image.load(os.path.join('images', 'VICTORY.png'))
 sword = pygame.mixer.Sound(os.path.join('soundeffects', 'sword.mp3'))
 player = Player((x_offset, windowY / 2))
 enemies = pygame.sprite.Group()
@@ -36,20 +37,18 @@ y = 0
 player_direction = 0
 action = 0
 attack_timer = 0
-vel = 10
-enemy_types = {
-    0: "Zombie"
-}
+vel = 8
 zombie_vel = 2
-zombie_range = 800
+e_range = 800
 enemy_count = 4
 dt = 0
 damage_timer = 0
 random.seed(round(time.time() * 100))
 dead = False
+player_victory = False
+in_menu = True
 
 # Tilemap & Stage variables
-
 current_stage = constants.stages[100]
 zone_code = 100
 BLACK_TILE = -1
@@ -84,6 +83,14 @@ tile_to_map = {
     110: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
     111: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
     112: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    113: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    114: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    115: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    116: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    117: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    118: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    119: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
+    120: pygame.image.load(os.path.join('images', 'FLOOR.png')).convert_alpha(),
     NE_WALL: pygame.image.load(os.path.join('images', 'NE_WALL.png')).convert_alpha(),
     NW_WALL: pygame.image.load(os.path.join('images', 'NW_WALL.png')).convert_alpha(),
     SE_WALL: pygame.image.load(os.path.join('images', 'SE_WALL.png')).convert_alpha(),
@@ -124,10 +131,9 @@ def spawn():
 
 # Creates an enemy of selected type
 def create_enemy():
-    location = random.randint(0, 3)
     for count in range(0, constants.enemy_count[zone_code]):
         enemy_x, enemy_y = spawn()
-        enemies.add(Npc((enemy_x, enemy_y), enemy_types[0]))
+        enemies.add(Npc((enemy_x, enemy_y), constants.enemy_types[zone_code]))
 
 
 def draw_background():
@@ -166,12 +172,14 @@ def movement():
     player.update(position=(x, y), direction=player_direction, action=action)
 
 
+# Creates the current stage and populates it
 def set_stage(current, next):
     global current_stage
     global zone_code
     global x
     global y
     global background
+    global zombie_vel
     current_stage = constants.stages[next]
     constants.cleared[zone_code] = True
     x_tile = 0
@@ -200,26 +208,45 @@ def set_stage(current, next):
     zone_code = next
     background = create_map(current_stage)
     enemies.empty()
+    zombie_vel = constants.enemy_vel[zone_code]
     if not constants.cleared[zone_code]:
         create_enemy()
+    if zone_code == 120:
+        for boss in enemies:
+            boss.hp = 100
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join('music', 'FinalBoss.mp3'))
+        pygame.mixer.music.play(-1)
 
 
 # Checks if player is blocked
-def is_blocked(direction):
+def is_blocked(cur_x, cur_y, direction):
     new_x = 0
     new_y = 0
     if direction == 0:
-        new_x = ((x - x_offset) / 64 + (y - y_offset) / 32) / 2
-        new_y = (((y - y_offset) + (vel * 2)) / 32 - (x - x_offset) / 64) / 2
-    if direction == 1:
-        new_x = (((x - x_offset) - (vel * 2)) / 64 + (y - y_offset) / 32) / 2
-        new_y = ((y - y_offset) / 32 - (x - x_offset) / 64) / 2
+        new_x = ((cur_x - x_offset) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) + (vel * 2)) / 32 - (cur_x - x_offset) / 64) / 2
     if direction == 2:
-        new_x = ((x - x_offset) / 64 + (y - y_offset) / 32) / 2
-        new_y = (((y - y_offset) - (vel * 2)) / 32 - (x - x_offset) / 64) / 2
+        new_x = (((cur_x - x_offset) - (vel * 2)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = ((cur_y - y_offset) / 32 - (cur_x - x_offset) / 64) / 2
+    if direction == 4:
+        new_x = ((cur_x - x_offset) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) - (vel * 2)) / 32 - (cur_x - x_offset) / 64) / 2
+    if direction == 6:
+        new_x = (((cur_x - x_offset) + (vel * 2)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = ((cur_y - y_offset) / 32 - (cur_x - x_offset) / 64) / 2
+    if direction == 1:
+        new_x = (((cur_x - x_offset) - (hypot(vel) * 3)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) + (hypot(vel) * 3)) / 32 - (cur_x - x_offset) / 64) / 2
     if direction == 3:
-        new_x = (((x - x_offset) + (vel * 2)) / 64 + (y - y_offset) / 32) / 2
-        new_y = ((y - y_offset) / 32 - (x - x_offset) / 64) / 2
+        new_x = (((cur_x - x_offset) - (hypot(vel) * 3)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) - (hypot(vel) * 3)) / 32 - (cur_x - x_offset) / 64) / 2
+    if direction == 5:
+        new_x = (((cur_x - x_offset) + (hypot(vel) * 3)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) - (hypot(vel) * 3)) / 32 - (cur_x - x_offset) / 64) / 2
+    if direction == 7:
+        new_x = (((cur_x - x_offset) + (hypot(vel) * 3)) / 64 + (cur_y - y_offset) / 32) / 2
+        new_y = (((cur_y - y_offset) + (hypot(vel) * 3)) / 32 - (cur_x - x_offset) / 64) / 2
     new_y = math.ceil(new_y)
     new_x = math.floor(new_x)
     if len(enemies) < 1 and current_stage[int(new_y)][int(new_x)] > 99:
@@ -239,22 +266,48 @@ def collision_detection(rect1, rect2):
 
 # Deals damage to enemy
 def deal_damage():
+    hits = 0
+    max_hits = int(player.level / 2)
     for an_enemy in enemies:
-        if an_enemy.hitbox.colliderect(player.hitbox.inflate(50, 50)):
+        hits += 1
+        if player.damage_box.colliderect(an_enemy.hitbox):
             an_enemy.take_damage(player.damage)
+            sword.play()
             if an_enemy.hp < 1:
                 enemies.remove(an_enemy)
                 player.kill_count += 1
                 player.xp += 1
+                player.xp_to_level()
+                if zone_code == 120:
+                    constants.cleared[zone_code] = True
+            if hits > max_hits:
+                break
 
 
 # Handles enemy movement
 def move_enemy(the_enemy):
-    if hypot(the_enemy.rect.centerx - player.rect.centerx,
-             the_enemy.rect.centery - player.rect.centery) < zombie_range:
-        dx = the_enemy.rect.centerx - player.rect.centerx
-        dy = the_enemy.rect.centery - player.rect.centery
-        theta = math.atan2(dy, dx)
+    dx = the_enemy.rect.centerx - player.rect.centerx
+    dy = the_enemy.rect.centery - player.rect.centery
+    theta = math.atan2(dy, dx)
+    if -5 * math.pi / 6 <= theta <= -2 * math.pi / 3:
+        enemy_direction = 7
+    elif -2 * math.pi / 3 <= theta <= -math.pi / 3:
+        enemy_direction = 0
+    elif -math.pi / 3 <= theta <= -math.pi / 6:
+        enemy_direction = 1
+    elif -math.pi / 6 <= theta <= math.pi / 6:
+        enemy_direction = 2
+    elif math.pi / 6 <= theta <= math.pi / 3:
+        enemy_direction = 3
+    elif math.pi / 3 <= theta <= 2 * math.pi / 3:
+        enemy_direction = 4
+    elif 2 * math.pi / 3 <= theta <= 5 * math.pi / 6:
+        enemy_direction = 5
+    else:
+        enemy_direction = 6
+    if the_enemy.hitbox.colliderect(player.hitbox):
+        the_enemy.update((the_enemy.rect.centerx, the_enemy.rect.centery), direction=enemy_direction, action=2)
+    elif not is_blocked(the_enemy.rect.centerx, the_enemy.rect.centery, enemy_direction) and hypot(dx, dy) < e_range:
         dx_direction = -1
         if dx == -1:
             dx_direction = 1
@@ -264,17 +317,28 @@ def move_enemy(the_enemy):
         if abs(dx) > abs(dy):
             if dx > 0:
                 the_enemy.update((the_enemy.rect.centerx + math.cos(theta) * zombie_vel * dx_direction,
-                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction), direction=1)
+                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction),
+                                 direction=enemy_direction)
             else:
                 the_enemy.update((the_enemy.rect.centerx + math.cos(theta) * zombie_vel * dx_direction,
-                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction), direction=3)
+                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction),
+                                 direction=enemy_direction)
         else:
             if dy > 0:
                 the_enemy.update((the_enemy.rect.centerx + math.cos(theta) * zombie_vel * dx_direction,
-                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction), direction=2)
+                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction),
+                                 direction=enemy_direction)
             else:
                 the_enemy.update((the_enemy.rect.centerx + math.cos(theta) * zombie_vel * dx_direction,
-                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction), direction=0)
+                                  the_enemy.rect.centery + math.sin(theta) * zombie_vel * dy_direction),
+                                 direction=enemy_direction)
+
+
+def victory():
+    # CODE THAT ADDS NEW RECORD TO DB
+    pygame.mixer.music.unload()
+    pygame.mixer.music.load(os.path.join('music', 'Victory.mp3'))
+    pygame.mixer.music.play(-1)
 
 
 def game_over():
@@ -292,44 +356,115 @@ def game_over():
 
 background = create_map(current_stage)
 x, y = spawn()
+clear_time = 0
+pygame.mixer.music.load(os.path.join('music', 'Menu.mp3'))
+pygame.mixer.music.play(-1)
 # Main game loop
 while running:
     keys = pygame.key.get_pressed()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-    if not dead:
+    if in_menu:
+        gameWindow.blit(menu_screen, menu_screen.get_rect(center=(windowX/2, windowY/2)))
+        if keys[pygame.K_1]:
+            in_menu = False
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
+            pygame.mixer.music.play(-1)
+        elif keys[pygame.K_2]:
+            #CODE FOR LOADING HIGHSCORES HERE :D
+            None
+        elif keys[pygame.K_ESCAPE]:
+            running = False
+    elif not player_victory and constants.cleared[120]:
+        player_victory = True
+        playerText = font.render("Your Final Stats: " +
+                                 "Level: " + str(player.level) + " Kills: " + str(player.kill_count) +
+                                 " Time (Seconds): " + str(clear_time / 1000),
+                                 True, (255, 255, 255), (0, 0, 0))
+        gameWindow.blit(victory_screen, victory_screen.get_rect(center=(windowX/2, windowY/2)))
+        gameWindow.blit(playerText, playerText.get_rect(center=(windowX/2, 4 * windowY/5)))
+        clear_time = 0
+        victory()
+    elif player_victory:
+        if keys[pygame.K_r]:
+            dead = False
+            player_victory = False
+            set_stage(101, 100)
+            for zone in constants.cleared:
+                constants.cleared[zone] = False
+            player = Player((x_offset, windowY / 2))
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
+            pygame.mixer.music.play(-1)
+        elif keys[pygame.K_m]:
+            dead = False
+            player_victory = False
+            set_stage(101, 100)
+            for zone in constants.cleared:
+                constants.cleared[zone] = False
+            player = Player((x_offset, windowY / 2))
+            in_menu = True
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(os.path.join('music', 'Menu.mp3'))
+            pygame.mixer.music.play(-1)
+    elif not dead:
         # Handles key actions (action 2 is attack animation so they cannot act during it)
         if action != 2:
             action = 0
-            if keys[pygame.K_LEFT]:
-                if x > 0 and not is_blocked(1):
-                    x -= vel
+            if keys[pygame.K_LEFT] and keys[pygame.K_DOWN]:
                 player_direction = 1
-                action = 1
-            if keys[pygame.K_RIGHT]:
-                if x < windowX and not is_blocked(3):
-                    x += vel
+                if not is_blocked(x, y, player_direction):
+                    x -= hypot(vel)
+                    y += hypot(vel)
+                    action = 1
+            elif keys[pygame.K_LEFT] and keys[pygame.K_UP]:
                 player_direction = 3
-                action = 1
-            if keys[pygame.K_UP]:
-                if y > 0 and not is_blocked(2):
-                    y -= vel
-                player_direction = 2
-                action = 1
-            if keys[pygame.K_DOWN]:
-                if y < windowY and not is_blocked(0):
-                    y += vel
-                player_direction = 0
-                action = 1
+                if not is_blocked(x, y, player_direction):
+                    x -= hypot(vel)
+                    y -= hypot(vel)
+                    action = 1
+            elif keys[pygame.K_RIGHT] and keys[pygame.K_UP]:
+                player_direction = 5
+                if not is_blocked(x, y, player_direction):
+                    x += hypot(vel)
+                    y -= hypot(vel)
+                    action = 1
+            elif keys[pygame.K_RIGHT] and keys[pygame.K_DOWN]:
+                player_direction = 7
+                if not is_blocked(x, y, player_direction):
+                    x += hypot(vel)
+                    y += hypot(vel)
+                    action = 1
+            else:
+                if keys[pygame.K_LEFT]:
+                    player_direction = 2
+                    if not is_blocked(x, y, player_direction):
+                        x -= vel
+                    action = 1
+                if keys[pygame.K_RIGHT]:
+                    player_direction = 6
+                    if not is_blocked(x, y, player_direction):
+                        x += vel
+                    action = 1
+                if keys[pygame.K_UP]:
+                    player_direction = 4
+                    if not is_blocked(x, y, player_direction):
+                        y -= vel
+                    action = 1
+                if keys[pygame.K_DOWN]:
+                    player_direction = 0
+                    if not is_blocked(x, y, player_direction):
+                        y += vel
+                    action = 1
             if keys[pygame.K_SPACE]:
-                sword.play()
                 action = 2
                 deal_damage()
             attack_timer = 0
         else:
             attack_timer += dt
-            if attack_timer > 500:
+            if attack_timer > 250:
                 attack_timer = 0
                 action = 0
         gameWindow.blit(backdrop, (0, 0))
@@ -338,7 +473,7 @@ while running:
         # Performs actions on each enemy
         for enemy in enemies:
             move_enemy(enemy)
-            if damage_timer > 750:
+            if damage_timer > 500:
                 collision_detection(player, enemy)
                 damage_timer = 0
         gameWindow.blit(player.image, player.rect)
@@ -351,10 +486,22 @@ while running:
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
             pygame.mixer.music.play(-1)
+        elif keys[pygame.K_m]:
+            dead = False
+            in_menu = True
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(os.path.join('music', 'Menu.mp3'))
+            pygame.mixer.music.play(-1)
     if player.hp < 1:
         game_over()
+    playerText = font.render("HP: " + str(player.hp) + " Lvl: " + str(player.level) + " XP: " + str(player.xp) +
+                             " Damage: " + str(player.damage) + " Kill Count: " + str(player.kill_count) +
+                             " Armor: " + str(player.armor), True, (255, 255, 255), (0, 0, 0))
+    if not dead and not in_menu and not player_victory:
+        gameWindow.blit(playerText, (0, 0))
     pygame.display.update()
-    dt = gameClock.tick(60)
+    dt = gameClock.tick(30)
+    clear_time += dt
     damage_timer += dt
 
 
