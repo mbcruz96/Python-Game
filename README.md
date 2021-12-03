@@ -34,5 +34,29 @@ Added background and foreground loading for tiles and enemies relative to player
 
 FUTURE STEPS: Clean up variables, Improve hit detection, Create complete stages
 
+## Update 3
+Added Player and Enemy Sprites (non-placeholder)
+
+Added 4 new enemy types
+
+Added game mechanics
+
+Added title screen, victory screen
+
+Added music, added victory conditions, improved movement and visuals slightly
+
+Cleaned up some constants in main
+
+First attempt at game "Balance"
+
 ## Disclaimer
 This game is purely for education and will not be sold or distributed. All assets are either free or are being used within the terms of fair use.
+
+## Credits
+Victory Theme - Consort for Brass by Kevin MacLeod
+
+Sprites by Clint Bellanger on opengameart.org
+
+GameOver Theme - Bach - Aria Variata, BVW. 989 - Variation No. 3 by Brendan Kinsella
+ 
+Menu Theme - Whales of the North by Vadim Krakhma
