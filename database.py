@@ -1,7 +1,8 @@
+import os
 import sqlite3 as sql
 
 # change path to desired location
-path = 'saves\\savegame.db'
+path = os.path.join('saves', 'highscores.db')
 
 
 def create_database():
@@ -43,7 +44,7 @@ def load_scores():
 
     cur = con.cursor()
 
-    cur.execute('SELECT Kill_Count, Level, Game_Time FROM Stats ORDER BY Kill_Count DESC, Kill_Count LIMIT 10')
+    cur.execute('SELECT Kill_Count, Level, Game_Time FROM Stats ORDER BY Game_Time ASC, Kill_Count LIMIT 10')
 
     # Get all rows of scores (as tuples) and store in list
     scoreList = cur.fetchall()

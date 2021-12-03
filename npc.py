@@ -10,20 +10,20 @@ class Npc(pygame.sprite.Sprite):
     def __init__(self, position, enemy_name):
         super().__init__()
         enemy_damage = {
-            "Wyvern": 15,
-            "Knight": 8,
-            "Zombie": 6,
-            "Demon": 12,
-            "EvilPlayer": 20,
+            "Wyvern": 20,
+            "Knight": 12,
+            "Zombie": 8,
+            "Demon": 16,
+            "EvilPlayer": 25,
             "Hobgoblin": 14
         }
         enemy_hp = {
-            "Wyvern": 40,
-            "Knight": 14,
-            "Zombie": 10,
-            "Demon": 15,
-            "Hobgoblin": 22,
-            "EvilPlayer": 100
+            "Wyvern": 55,
+            "Knight": 26,
+            "Zombie": 12,
+            "Demon": 45,
+            "Hobgoblin": 18,
+            "EvilPlayer": 120
         }
         self.name = enemy_name
         self.damage = enemy_damage[enemy_name]

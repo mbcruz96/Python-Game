@@ -6,14 +6,15 @@ from math import hypot
 import pygame
 
 import constants
+import database
 from npc import Npc
 from player import Player
 
 # Pygame setup
 pygame.init()
 screenInfo = pygame.display.Info()
-windowX = int(1920 * .9)
-windowY = int(1080 * .9)
+windowX = int(screenInfo.current_w * .9)
+windowY = int(screenInfo.current_h * .9)
 x_offset = windowX / 2
 y_offset = windowY / 8
 gameWindow = pygame.display.set_mode((windowX, windowY))
@@ -266,6 +267,7 @@ def collision_detection(rect1, rect2):
 
 # Deals damage to enemy
 def deal_damage():
+    global vel
     hits = 0
     max_hits = int(player.level / 2)
     for an_enemy in enemies:
@@ -278,6 +280,7 @@ def deal_damage():
                 player.kill_count += 1
                 player.xp += 1
                 player.xp_to_level()
+                vel = player.level + 7
                 if zone_code == 120:
                     constants.cleared[zone_code] = True
             if hits > max_hits:
@@ -335,7 +338,8 @@ def move_enemy(the_enemy):
 
 
 def victory():
-    # CODE THAT ADDS NEW RECORD TO DB
+    global clear_time
+    database.save_scores(player.kill_count, player.level, clear_time/1000)
     pygame.mixer.music.unload()
     pygame.mixer.music.load(os.path.join('music', 'Victory.mp3'))
     pygame.mixer.music.play(-1)
@@ -366,15 +370,27 @@ while running:
         if event.type == pygame.QUIT:
             running = False
     if in_menu:
-        gameWindow.blit(menu_screen, menu_screen.get_rect(center=(windowX/2, windowY/2)))
+        gameWindow.blit(menu_screen, menu_screen.get_rect(center=(windowX / 2, windowY / 2)))
         if keys[pygame.K_1]:
             in_menu = False
+            clear_time = 0
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
             pygame.mixer.music.play(-1)
         elif keys[pygame.K_2]:
-            #CODE FOR LOADING HIGHSCORES HERE :D
-            None
+            gameWindow.blit(backdrop, (0, 0))
+            score_list = database.load_scores()
+            highscores = []
+            i = 1
+            for score in score_list:
+                highscores.append(font.render(str(i) + ") Kills: " + str(score[0]) + " Level: " + str(score[1]) +
+                                              " Seconds: " + str(score[2]),
+                                              True, (255, 255, 255), (0, 0, 0)))
+                i += 1
+            y_score = 1
+            for score in highscores:
+                gameWindow.blit(score, score.get_rect(center=(windowX / 2, y_score * windowY / 11)))
+                y_score += 1
         elif keys[pygame.K_ESCAPE]:
             running = False
     elif not player_victory and constants.cleared[120]:
@@ -383,13 +399,14 @@ while running:
                                  "Level: " + str(player.level) + " Kills: " + str(player.kill_count) +
                                  " Time (Seconds): " + str(clear_time / 1000),
                                  True, (255, 255, 255), (0, 0, 0))
-        gameWindow.blit(victory_screen, victory_screen.get_rect(center=(windowX/2, windowY/2)))
-        gameWindow.blit(playerText, playerText.get_rect(center=(windowX/2, 4 * windowY/5)))
-        clear_time = 0
+        gameWindow.blit(victory_screen, victory_screen.get_rect(center=(windowX / 2, windowY / 2)))
+        gameWindow.blit(playerText, playerText.get_rect(center=(windowX / 2, 4 * windowY / 5)))
         victory()
+        clear_time = 0
     elif player_victory:
         if keys[pygame.K_r]:
             dead = False
+            clear_time = 0
             player_victory = False
             set_stage(101, 100)
             for zone in constants.cleared:
@@ -415,47 +432,47 @@ while running:
             action = 0
             if keys[pygame.K_LEFT] and keys[pygame.K_DOWN]:
                 player_direction = 1
-                if not is_blocked(x, y, player_direction):
+                if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                     x -= hypot(vel)
                     y += hypot(vel)
                     action = 1
             elif keys[pygame.K_LEFT] and keys[pygame.K_UP]:
                 player_direction = 3
-                if not is_blocked(x, y, player_direction):
+                if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                     x -= hypot(vel)
                     y -= hypot(vel)
                     action = 1
             elif keys[pygame.K_RIGHT] and keys[pygame.K_UP]:
                 player_direction = 5
-                if not is_blocked(x, y, player_direction):
+                if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                     x += hypot(vel)
                     y -= hypot(vel)
                     action = 1
             elif keys[pygame.K_RIGHT] and keys[pygame.K_DOWN]:
                 player_direction = 7
-                if not is_blocked(x, y, player_direction):
+                if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                     x += hypot(vel)
                     y += hypot(vel)
                     action = 1
             else:
                 if keys[pygame.K_LEFT]:
                     player_direction = 2
-                    if not is_blocked(x, y, player_direction):
+                    if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                         x -= vel
                     action = 1
                 if keys[pygame.K_RIGHT]:
                     player_direction = 6
-                    if not is_blocked(x, y, player_direction):
+                    if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                         x += vel
                     action = 1
                 if keys[pygame.K_UP]:
                     player_direction = 4
-                    if not is_blocked(x, y, player_direction):
+                    if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                         y -= vel
                     action = 1
                 if keys[pygame.K_DOWN]:
                     player_direction = 0
-                    if not is_blocked(x, y, player_direction):
+                    if not is_blocked(x, y, player_direction) or keys[pygame.K_LSHIFT]:
                         y += vel
                     action = 1
             if keys[pygame.K_SPACE]:
@@ -480,9 +497,10 @@ while running:
         # Draws enemies that are in front of the player, in front of the player
         draw_foreground()
     else:
-        gameWindow.blit(game_over_screen, game_over_screen.get_rect(center=(windowX/2, windowY/2)))
+        gameWindow.blit(game_over_screen, game_over_screen.get_rect(center=(windowX / 2, windowY / 2)))
         if keys[pygame.K_r]:
             dead = False
+            clear_time = 0
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join('music', 'MainTheme.mp3'))
             pygame.mixer.music.play(-1)
@@ -503,6 +521,5 @@ while running:
     dt = gameClock.tick(30)
     clear_time += dt
     damage_timer += dt
-
 
 pygame.QUIT

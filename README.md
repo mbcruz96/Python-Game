@@ -10,6 +10,19 @@ Kevin
 
 Nathan
 
+## Description
+This is an Isometric dungeon crawler that is for fun, we use a sqlite3 database to save highscores for each completed run
+
+## Libraries
+We use sqlite3 and pygame as our primary libraries.
+
+Along with the native libraries: Math, os, random, and time.
+
+## Controls
+Arrow Keys - Movement
+Spacebar - Attack
+Shift - Get Unstuck (CAUTION: Do not go out of bounds, it will crash the game)
+
 ## Update 1
 Created Main Loop and added some sound effects.
 
